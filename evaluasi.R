@@ -4,6 +4,7 @@ selectedProv<-"sumsel"
 initialYear<-2010
 finalYear<-2018
 
+# use primary data annually 
 dataPEP<-data.frame(read.csv(paste0("data/",selectedProv,"/dataPEP.csv")))
 targetEmisi<-data.frame(read.csv(paste0("data/",selectedProv,"/targetEmisi.csv")))
 bauEmisi<-data.frame(read.csv(paste0("data/",selectedProv,"/bauEmisi.csv")))
@@ -27,9 +28,9 @@ colnames(aktualPenurunanEmisi)<-c("tahun",
 # susun data aktual emisi dari bau emisi - penurunan emisi
 aktualEmisi<-aktualPenurunanEmisi
 colnames(aktualEmisi)<-c("tahun",
-                         "emisi.energi",
-                         "emisi.lahan",
-                         "emisi.limbah")
+                         "emisiEnergi",
+                         "emisiLahan",
+                         "emisiLimbah")
 aktualEmisi[,2:4]<-bauEmisi[,2:4]-aktualPenurunanEmisi[,2:4]
 
 # buat tabel perbandingan emisi 
@@ -38,19 +39,19 @@ aktualEmisi$emisi.total<-rowSums(aktualEmisi[,2:4])
 bauEmisi$emisi.total<-rowSums(bauEmisi[,2:4])
 targetEmisi$emisi.total<-rowSums(targetEmisi[,2:4])
 
-aktualEmisi$kumulatif.emisi.energi<-cumsum(aktualEmisi$emisi.energi)
-aktualEmisi$kumulatif.emisi.lahan<-cumsum(aktualEmisi$emisi.lahan)
-aktualEmisi$kumulatif.emisi.limbah<-cumsum(aktualEmisi$emisi.limbah)
+aktualEmisi$kumulatif.emisi.energi<-cumsum(aktualEmisi$emisiEnergi)
+aktualEmisi$kumulatif.emisi.lahan<-cumsum(aktualEmisi$emisiLahan)
+aktualEmisi$kumulatif.emisi.limbah<-cumsum(aktualEmisi$emisiLimbah)
 aktualEmisi$kumulatif.emisi.total<-cumsum(aktualEmisi$emisi.total)
 
-bauEmisi$kumulatif.emisi.energi<-cumsum(bauEmisi$emisi.energi)
-bauEmisi$kumulatif.emisi.lahan<-cumsum(bauEmisi$emisi.lahan)
-bauEmisi$kumulatif.emisi.limbah<-cumsum(bauEmisi$emisi.limbah)
+bauEmisi$kumulatif.emisi.energi<-cumsum(bauEmisi$emisiEnergi)
+bauEmisi$kumulatif.emisi.lahan<-cumsum(bauEmisi$emisiLahan)
+bauEmisi$kumulatif.emisi.limbah<-cumsum(bauEmisi$emisiLimbah)
 bauEmisi$kumulatif.emisi.total<-cumsum(bauEmisi$emisi.total)
 
-targetEmisi$kumulatif.emisi.energi<-cumsum(targetEmisi$emisi.energi)
-targetEmisi$kumulatif.emisi.lahan<-cumsum(targetEmisi$emisi.lahan)
-targetEmisi$kumulatif.emisi.limbah<-cumsum(targetEmisi$emisi.limbah)
+targetEmisi$kumulatif.emisi.energi<-cumsum(targetEmisi$emisiEnergi)
+targetEmisi$kumulatif.emisi.lahan<-cumsum(targetEmisi$emisiLahan)
+targetEmisi$kumulatif.emisi.limbah<-cumsum(targetEmisi$emisiLimbah)
 targetEmisi$kumulatif.emisi.total<-cumsum(targetEmisi$emisi.total)
 
 aktualEmisi<-data.frame(aktualEmisi, ID="aktual")
@@ -118,9 +119,12 @@ kinerjaProvinsi<-list()
 
 functionKinerjaProvinsi<- function(emissionType = NULL, emissionData= compareEmisi){
   result<-list()
+  # - (sumEmisiTotalTarget - sumEmisiTotalBAU) / sumEmisiTotalBAU * 100
+  # result$emisi.target <- - ( sum(emissionData[emissionData$ID=="target",]$emisi.total) - sum(emissionData[emissionData$ID=="BAU",]$emisi.total) ) / sum(emissionData[emissionData$ID=="BAU",]$emisi.total) *100
   eval(parse(text=paste0(
     'result$emisi.target<- - ( sum(emissionData[emissionData$ID=="target",]$',emissionType,') - sum(emissionData[emissionData$ID=="BAU",]$',emissionType,') ) / sum(emissionData[emissionData$ID=="BAU",]$',emissionType,') *100'
   )))
+  # - (sumEmisiTotalTarget - sumEmisiTotalBAU) / sumEmisiTotalBAU * 100
   eval(parse(text=paste0(
     'result$emisi.aktual<- - ( sum(emissionData[emissionData$ID=="aktual",]$',emissionType,') - sum(emissionData[emissionData$ID=="BAU",]$',emissionType,') ) / sum(emissionData[emissionData$ID=="BAU",]$',emissionType,') *100'
   )))
@@ -146,9 +150,9 @@ kinerjaProvinsi$keseluruhan<-functionKinerjaProvinsi(emissionType="emisi.total")
 
 # 1. tercapai tidaknya target penurunan emisi kumulatif per sektor PRK
 # pakai kumulatif (bukan rata2 penurunan tiap tahun), karena di dokumen RADGRK hitungnya juga dari kumulatif emisi
-kinerjaProvinsi$energi<-functionKinerjaProvinsi(emissionType="emisi.energi")
-kinerjaProvinsi$lahan<-functionKinerjaProvinsi(emissionType="emisi.lahan")
-kinerjaProvinsi$limbah<-functionKinerjaProvinsi(emissionType="emisi.limbah")
+kinerjaProvinsi$energi<-functionKinerjaProvinsi(emissionType="emisiEnergi")
+kinerjaProvinsi$lahan<-functionKinerjaProvinsi(emissionType="emisiLahan")
+kinerjaProvinsi$limbah<-functionKinerjaProvinsi(emissionType="emisiLimbah")
 
 # 2. sektor PRK dengan penurunan emisi (thd target) terburuk 
 # dianggap terburuk jika rasio ketercapaian (penurunan emisi aktual/penrunan emisi target) terkecil
@@ -156,13 +160,14 @@ kinerjaProvinsiTable <- data.frame(matrix(unlist(kinerjaProvinsi), nrow=4, byrow
 rownames(kinerjaProvinsiTable)<-names(kinerjaProvinsi)
 colnames(kinerjaProvinsiTable)<-names(kinerjaProvinsi[[1]])
 sektorTerburuk<-rownames(kinerjaProvinsiTable[which.min(kinerjaProvinsiTable$persenKetercapaian),])
-sektorTerbaik<-rownames(kinerjaProvinsiTable[which.min(kinerjaProvinsiTable$persenKetercapaian),])
+sektorTerbaik<-rownames(kinerjaProvinsiTable[which.max(kinerjaProvinsiTable$persenKetercapaian),])
 
 
 # kinerja provinsi per tahun:
 
 # 1. ketercapaian tahunan per sektor
 
+tahun=c(initialYear:finalYear)
 kinerjaProvinsi$ketercapaianTahunan <- data.frame(tahun= c(initialYear:finalYear), 
                                                   penurunan.emisi.energi=NA, 
                                                   penurunan.emisi.lahan=NA, 
@@ -183,6 +188,7 @@ for (type in colnames(aktualPenurunanEmisi[,2:5])){
 
 # kesimpulan ketercapaian tahunan 
 for (type in colnames(aktualPenurunanEmisi[,2:5])){
+  
   if (type=='penurunan.emisi.total'){
     index="keseluruhan"
   } else if(type=='penurunan.emisi.energi'){
@@ -192,6 +198,7 @@ for (type in colnames(aktualPenurunanEmisi[,2:5])){
   } else if(type=='penurunan.emisi.limbah'){
     index="limbah"
   } 
+  
   if (all(kinerjaProvinsi$ketercapaianTahunan[,type]=="tidak terpenuhi")){
     kinerjaProvinsiTable[index,"ketercapaianTahunan"]= "tidak pernah terpenuhi"
   } else if (all(kinerjaProvinsi$ketercapaianTahunan[,type]=="terlewati")){
@@ -209,6 +216,7 @@ for (type in colnames(aktualPenurunanEmisi[,2:5])){
       kinerjaProvinsiTable[index,"ketercapaianTahunan"]= "bervariasi"
     }
   }  
+  
 }
 
 
