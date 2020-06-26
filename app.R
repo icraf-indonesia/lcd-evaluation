@@ -150,7 +150,8 @@ server <- function(input, output, session) {
     dataPEP <- read.table(csvDataPEP$datapath, header=T, sep=",")
     
     ##### BEGIN: Prepare Emission Data #####
-
+    initialYear<-2010
+    finalYear<-2018
     # susun penurunan emisi per tahun per sektor berdasarkan data PEP
     dataPEP.aggregate<-aggregate(dataPEP$Total.Penurunan.emisi, by = list(dataPEP$tahun_pelaporan,dataPEP$sektor), FUN=sum)
     colnames(dataPEP.aggregate)<-c("tahun", "sektor", "penurunan.emisi")
@@ -183,7 +184,7 @@ server <- function(input, output, session) {
     aktualEmisi$kumulatif.emisi.lahan<-cumsum(aktualEmisi$emisiLahan)
     aktualEmisi$kumulatif.emisi.limbah<-cumsum(aktualEmisi$emisiLimbah)
     aktualEmisi$kumulatif.emisi.total<-cumsum(aktualEmisi$emisi.total)
-    
+
     bauEmisi$kumulatif.emisi.energi<-cumsum(bauEmisi$emisiEnergi)
     bauEmisi$kumulatif.emisi.lahan<-cumsum(bauEmisi$emisiLahan)
     bauEmisi$kumulatif.emisi.limbah<-cumsum(bauEmisi$emisiLimbah)
@@ -263,22 +264,22 @@ server <- function(input, output, session) {
       # - (sumEmisiTotalTarget - sumEmisiTotalBAU) / sumEmisiTotalBAU * 100
       # result$emisi.target <- - ( sum(emissionData[emissionData$ID=="target",]$emisi.total) - sum(emissionData[emissionData$ID=="BAU",]$emisi.total) ) / sum(emissionData[emissionData$ID=="BAU",]$emisi.total) *100
       eval(parse(text=paste0(
-        'result$emisi.target<- - ( sum(emissionData[emissionData$ID=="target",]$',emissionType,') - sum(emissionData[emissionData$ID=="BAU",]$',emissionType,') ) / sum(emissionData[emissionData$ID=="BAU",]$',emissionType,') *100'
+        'result$penurunanEmisiTarget<- - ( sum(emissionData[emissionData$ID=="target",]$',emissionType,') - sum(emissionData[emissionData$ID=="BAU",]$',emissionType,') ) / sum(emissionData[emissionData$ID=="BAU",]$',emissionType,') *100'
       )))
       # - (sumEmisiTotalTarget - sumEmisiTotalBAU) / sumEmisiTotalBAU * 100
       eval(parse(text=paste0(
-        'result$emisi.aktual<- - ( sum(emissionData[emissionData$ID=="aktual",]$',emissionType,') - sum(emissionData[emissionData$ID=="BAU",]$',emissionType,') ) / sum(emissionData[emissionData$ID=="BAU",]$',emissionType,') *100'
+        'result$penurunanEmisiAktual<- - ( sum(emissionData[emissionData$ID=="aktual",]$',emissionType,') - sum(emissionData[emissionData$ID=="BAU",]$',emissionType,') ) / sum(emissionData[emissionData$ID=="BAU",]$',emissionType,') *100'
       )))
     
-      if (result$emisi.target==result$emisi.aktual){
+      if (result$penurunanEmisiTarget==result$penurunanEmisiAktual){
         result$ketercapaian<- "terpenuhi"
-      } else if (result$emisi.target <= result$emisi.aktual){
+      } else if (result$penurunanEmisiTarget <= result$penurunanEmisiAktual){
         result$ketercapaian<- "terlewati"
       } else {
         result$ketercapaian<- "tidak terpenuhi"
       }
       
-      result$persenKetercapaian<- result$emisi.aktual/result$emisi.target * 100
+      result$persenKetercapaian<- result$penurunanEmisiAktual/result$penurunanEmisiTarget * 100
       
       result
     }
